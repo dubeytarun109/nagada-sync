@@ -20,7 +20,7 @@ public class SyncEngineTest {
         InMemoryProjectionStore projectionStore = new InMemoryProjectionStore();
         SyncEngine syncEngine = new SyncEngine("device-1", outbox, projectionStore, (SyncEngine.SyncTransport) null);
         outbox.add("c1", "p".getBytes());
-        projectionStore.recordEvents(List.of(new ServerEvent(10L, "d", "p", 0)));
+        projectionStore.recordEvents(List.of(new ServerEvent(10L, "c","d", "p", 0)));
 
         // When
         SyncRequest request = syncEngine.buildSyncRequest();

@@ -46,7 +46,7 @@ This implementation prioritizes correctness over performance.
 Run the server using Maven (recommended):
 
 ```bash
-cd reference/http-server
+cd reference/server/http
 mvn spring-boot:run
 ```
 
@@ -145,8 +145,8 @@ Bug fixes, clarity improvements, and additional testing are welcome.
 | Version | Focus |
 |--------|--------|
 | `v0.2` | Basic sync wiring |
-| `v0.3` | Full specification compliance (**current**) |
-| `v0.4` | Automated test coverage |
+| `v0.3` | Full specification compliance |
+| `v0.4` | Automated test coverage  (**current**) |
 | `v0.5` | Conformance harness |
 | `v0.6+` | Optional extensions (WebSockets, Snapshotting, CRDT, etc.) |
 

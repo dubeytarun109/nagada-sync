@@ -25,7 +25,7 @@ This document outlines the planned features and milestones for Nagada-Pulse.
 - [x] Reference HTTP sync implementation
 
 ### Phase 1: Foundation Implementations (0.2–0.4)
-- [ ] Minimal server implementation (HTTP baseline)
+- [x] Minimal server implementation (HTTP baseline)
 - [ ] Dart client SDK (experimental)
 - [ ] Conformance test kit
 - [ ] JavaScript client SDK

@@ -4,14 +4,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.nagada.pulse</groupId>
-    <artifactId>nagada-parent</artifactId>
+    <artifactId>nagada-reference</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <packaging>pom</packaging>
 
     <modules>
         <module>protocol</module>
-        <module>server-core</module>
-        <module>server-http</module>
+        <module>server</module>
         <module>client</module>
     </modules>
 

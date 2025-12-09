@@ -23,7 +23,7 @@ public class JsonSerializationTest {
 
     @Test
     void testServerEvent() throws Exception {
-        ServerEvent original = new ServerEvent(1L, "device-1", "payload", System.currentTimeMillis());
+        ServerEvent original = new ServerEvent(1L, "test-client-event-id", "device-1", "payload", System.currentTimeMillis());
         String json = objectMapper.writeValueAsString(original);
         ServerEvent deserialized = objectMapper.readValue(json, ServerEvent.class);
         assertThat(deserialized).usingRecursiveComparison().isEqualTo(original);
@@ -44,7 +44,7 @@ public class JsonSerializationTest {
 
     @Test
     void testSyncResponse() throws Exception {
-        ServerEvent serverEvent = new ServerEvent(1L, "device-1", "payload", System.currentTimeMillis());
+        ServerEvent serverEvent = new ServerEvent(1L, "test-client-event-id", "device-1", "payload", System.currentTimeMillis());
         SyncResponse original = new SyncResponse(List.of("c-event-1"), List.of(serverEvent));
         String json = objectMapper.writeValueAsString(original);
         SyncResponse deserialized = objectMapper.readValue(json, SyncResponse.class);
