@@ -17,7 +17,7 @@ class MockHttpSyncTransport extends Mock implements HttpSyncTransport {
     return super.noSuchMethod(
       Invocation.method(#sync, [request]),
       returnValue: Future.value(
-        SyncResponse(ackedClientEventIds: [], newServerEvents: []),
+        SyncResponse(successClientEventIds: [], newServerEvents: [], nextHeartbeatMs: -1, errorClientEventIds: {}),
       ),
     );
   }
@@ -76,8 +76,8 @@ void main() {
             (events) async {
               for (final event in events) {
                 final decodedPayload = event.payload;
-                if (decodedPayload['id'] != null) {
-                  projection[decodedPayload['id'] as String] = decodedPayload;
+                if (decodedPayload?['id'] != null) {
+                  projection[decodedPayload?['id'] as String] = decodedPayload;
                 }
               }
             },
@@ -91,22 +91,22 @@ void main() {
 
       final List<String> eventIds = [];
       final engine = createEngine(onApplyEvents: (events) async {
-        eventIds.addAll(events.map((e) => e.payload['id'] as String));
+        eventIds.addAll(events.map((e) => e.payload?['id'] as String));
         for (final event in events) {
           final decodedPayload = event.payload;
-          if (decodedPayload['id'] != null) {
-            projection[decodedPayload['id'] as String] = decodedPayload;
+          if (decodedPayload?['id'] != null) {
+            projection[decodedPayload?['id'] as String] = decodedPayload;
           }
         }
       });
 
       // 1. Insert records offline
-      await outbox.add(ClientEvent(clientEventId: 'off-1', type: 'add', payload: {'id': 'offline-1', 'data': 'first'}));
-      await outbox.add(ClientEvent(clientEventId: 'off-2', type: 'add', payload: {'id': 'offline-2', 'data': 'second'}));
+      await outbox.add(ClientEvent(clientEventId: 'off-1', type: 'add', payload: {'id': 'offline-1', 'data': 'first'},payloadManifest: [],createdAt: 0));
+      await outbox.add(ClientEvent(clientEventId: 'off-2', type: 'add', payload: {'id': 'offline-2', 'data': 'second'},payloadManifest: [],createdAt: 0));
 
       // Try to sync - should fail due to network
       await expectLater(engine.runCycle(), throwsException);
-      expect(await outbox.loadPending(), hasLength(2));
+      expect(await outbox.pending(), hasLength(2));
       expect(await offsetStore.get()??0, 0);
       expect(eventIds, isEmpty); // No events applied as sync failed
 
@@ -114,18 +114,18 @@ void main() {
       // The outbox and offset should persist
       final List<String> eventIds2 = [];
       final engine2 = createEngine(onApplyEvents: (events) async {
-        eventIds2.addAll(events.map((e) => e.payload['id'] as String));
+        eventIds2.addAll(events.map((e) => e.payload?['id'] as String));
         // Also update projection
         for (final event in events) {
           final decodedPayload = event.payload;
-          if (decodedPayload['id'] != null) {
-            projection[decodedPayload['id'] as String] = decodedPayload;
+          if (decodedPayload?['id'] != null) {
+            projection[decodedPayload?['id'] as String] = decodedPayload;
           }
         }
       });
 
       await expectLater(engine2.runCycle(), throwsException); // Still offline
-      expect(await outbox.loadPending(), hasLength(2));
+      expect(await outbox.pending(), hasLength(2));
       expect(await offsetStore.get()??0, 0);
       expect(eventIds2, isEmpty);
 
@@ -136,17 +136,17 @@ void main() {
         expect(request.pendingEvents.map((e) => e.clientEventId), containsAll(['off-1', 'off-2']));
 
         return SyncResponse(
-          ackedClientEventIds: ['off-1', 'off-2'],
+          successClientEventIds: ['off-1', 'off-2'],
           newServerEvents: [
-            ServerEvent(serverEventId: 1, originClientEventId: 'off-1', originClientDeviceId: 'test-device', payload: {"id": "offline-1", "data": "first"}, createdAt: 0),
-            ServerEvent(serverEventId: 2, originClientEventId: 'off-2', originClientDeviceId: 'test-device', payload: {"id": "offline-2", "data": "second"}, createdAt: 0),
-          ],
+            ServerEvent(serverEventId: 1, originClientEventId: 'off-1', originClientDeviceId: 'test-device', payload: {"id": "offline-1", "data": "first"},payloadManifest: [], createdAt: 0),
+            ServerEvent(serverEventId: 2, originClientEventId: 'off-2', originClientDeviceId: 'test-device', payload: {"id": "offline-2", "data": "second"},payloadManifest: [], createdAt: 0),
+          ], nextHeartbeatMs: -1, errorClientEventIds: {},
         );
       });
 
       await engine2.runCycle();
 
-      expect(await outbox.loadPending(), isEmpty);
+      expect(await outbox.pending(), isEmpty);
       expect(await offsetStore.get()??0, 2);
       expect(eventIds2.length, 2);
       expect(eventIds2, containsAll(['offline-1', 'offline-2']));
@@ -162,18 +162,18 @@ void main() {
       final engine = createEngine();
 
       // Create events in a specific order
-      final clientEvent1 = ClientEvent(clientEventId: 'event-1', type: 't', payload: {'id': 'item-A', 'value': 1});
-      final clientEvent2 = ClientEvent(clientEventId: 'event-2', type: 't', payload: {'id': 'item-A', 'value': 2});
-      final clientEvent3 = ClientEvent(clientEventId: 'event-3', type: 't', payload: {'id': 'item-A', 'value': 3});
+      final clientEvent1 = ClientEvent(clientEventId: 'event-1', type: 't', payload: {'id': 'item-A', 'value': 1},payloadManifest: [],createdAt: 0);
+      final clientEvent2 = ClientEvent(clientEventId: 'event-2', type: 't', payload: {'id': 'item-A', 'value': 2},payloadManifest: [],createdAt: 0);
+      final clientEvent3 = ClientEvent(clientEventId: 'event-3', type: 't', payload: {'id': 'item-A', 'value': 3},payloadManifest: [],createdAt: 0);
 
-      await outbox.add(ClientEvent(clientEventId: 'event-1', type: 't', payload: {'id': 'item-A', 'value': 1}));
-      await outbox.add(ClientEvent(clientEventId: 'event-2', type: 't', payload: {'id': 'item-A', 'value': 2}));
-      await outbox.add(ClientEvent(clientEventId: 'event-3', type: 't', payload: {'id': 'item-A', 'value': 3}));
+      await outbox.add(ClientEvent(clientEventId: 'event-1', type: 't', payload: {'id': 'item-A', 'value': 1},payloadManifest: [],createdAt: 0));
+      await outbox.add(ClientEvent(clientEventId: 'event-2', type: 't', payload: {'id': 'item-A', 'value': 2},payloadManifest: [],createdAt: 0));
+      await outbox.add(ClientEvent(clientEventId: 'event-3', type: 't', payload: {'id': 'item-A', 'value': 3},payloadManifest: [],createdAt: 0));
 
 
       // Attempt sync while offline
       await expectLater(engine.runCycle(), throwsException);
-      expect(await outbox.loadPending(), hasLength(3));
+      expect(await outbox.pending(), hasLength(3));
 
       // Go online - server will receive events in order they were added to outbox
       when(transport.sync(any)).thenAnswer((invocation) async {
@@ -181,12 +181,12 @@ void main() {
         expect(request.pendingEvents.map((e) => e.clientEventId), orderedEquals(['event-1', 'event-2', 'event-3']));
 
         return SyncResponse(
-          ackedClientEventIds: ['event-1', 'event-2', 'event-3'],
+          successClientEventIds: ['event-1', 'event-2', 'event-3'],
           newServerEvents: [
-            ServerEvent(serverEventId: 1, originClientEventId: 'event-1', originClientDeviceId: 'test-device',  payload: clientEvent1.payload,createdAt: 0),
-            ServerEvent(serverEventId: 2, originClientEventId: 'event-2', originClientDeviceId: 'test-device',  payload: clientEvent2.payload, createdAt: 0),
-            ServerEvent(serverEventId: 3, originClientEventId: 'event-3', originClientDeviceId: 'test-device',  payload: clientEvent3.payload, createdAt: 0),
-          ],
+            ServerEvent(serverEventId: 1, originClientEventId: 'event-1', originClientDeviceId: 'test-device',  payload: clientEvent1.payload,payloadManifest: [],createdAt: 0),
+            ServerEvent(serverEventId: 2, originClientEventId: 'event-2', originClientDeviceId: 'test-device',  payload: clientEvent2.payload,payloadManifest: [], createdAt: 0),
+            ServerEvent(serverEventId: 3, originClientEventId: 'event-3', originClientDeviceId: 'test-device',  payload: clientEvent3.payload,payloadManifest: [], createdAt: 0),
+          ], nextHeartbeatMs: -1, errorClientEventIds: {},
         );
       });
 
@@ -195,8 +195,8 @@ void main() {
         appliedEvents.addAll(events);
         // Also update projection
         for (final event in events) {
-          if (event.payload['id'] != null) {
-            projection[event.payload['id'] as String] = event.payload;
+          if (event.payload?['id'] != null) {
+            projection[event.payload?['id'] as String] = event.payload;
           }
         }
       });
@@ -207,7 +207,7 @@ void main() {
       expect(appliedEvents.map((e) => e.originClientEventId), orderedEquals(['event-1', 'event-2', 'event-3']));
       expect(projection['item-A']['value'], 3); // Final state should be from event 3
       expect(await offsetStore.get()??0, 3);
-      expect(await outbox.loadPending(), isEmpty);
+      expect(await outbox.pending(), isEmpty);
     });
   });
 }

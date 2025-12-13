@@ -10,14 +10,16 @@ class ServerEvent {
   final String originClientEventId;
   /// The ID of the device that originated the event.
   final String originClientDeviceId;
-  final Map<String, dynamic> payload;
+  final Map<String, dynamic> ? payload;
+  final List<String> ? payloadManifest; 
   final int createdAt;
 
   ServerEvent({
     required this.serverEventId,
     required this.originClientEventId,
     required this.originClientDeviceId,
-    required this.payload,
+    this.payload,
+    this.payloadManifest,
     required this.createdAt,
   });
 

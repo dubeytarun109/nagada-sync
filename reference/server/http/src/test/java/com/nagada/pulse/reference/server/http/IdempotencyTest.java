@@ -28,7 +28,7 @@ public class IdempotencyTest {
     @Test
     void replayingSyncRequestDoesNotDuplicateEvents() {
         // 1. Send a request with a pending event.
-        ClientEvent event = new ClientEvent("idempotent-ce-1", "user.updated", "{}".getBytes(StandardCharsets.UTF_8));
+        ClientEvent event = new ClientEvent("idempotent-ce-1", "user.updated", "{}".getBytes(StandardCharsets.UTF_8),List.of() ,0L  );
         SyncRequest request = new SyncRequest("client-idempotent", List.of(event), 0L);
 
         ResponseEntity<SyncResponse> firstResponse = restTemplate.postForEntity("/sync", request, SyncResponse.class);
@@ -42,7 +42,7 @@ public class IdempotencyTest {
         // 3. Verify no new events were created (because lastKnownServerEventId was advanced)
         // and the original acknowledgement is returned.
         assertTrue(secondResponse.getBody().getNewServerEvents().isEmpty(), "Server should not return duplicate events when client has acknowledged them");
-        assertTrue(secondResponse.getBody().getAckedClientEventIds().contains("idempotent-ce-1"));
+        assertTrue(secondResponse.getBody().getSuccessClientEventIds().contains("idempotent-ce-1"));
 
         // Verify the server event ID from the acknowledgement matches the original one.
         // Note: This requires the SyncHandler to be updated to return committed event mappings.
@@ -64,6 +64,6 @@ public class IdempotencyTest {
         // 4. Verify the server's response is minimal/empty (no new events).
         assertNotNull(repeatResponse.getBody());
         assertTrue(repeatResponse.getBody().getNewServerEvents().isEmpty(), "Second sync should return no new events");
-        assertTrue(repeatResponse.getBody().getAckedClientEventIds().isEmpty());
+        assertTrue(repeatResponse.getBody().getSuccessClientEventIds().isEmpty());
     }
 }

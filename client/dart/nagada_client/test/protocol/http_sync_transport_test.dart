@@ -36,7 +36,7 @@ void main() {
       );
 
       final responseBody =
-          jsonEncode(SyncResponse(newServerEvents: [], ackedClientEventIds: []).toJson());
+          jsonEncode(SyncResponse(newServerEvents: [], successClientEventIds: [], nextHeartbeatMs: -1, errorClientEventIds: {}).toJson());
 
       when(mockClient.post(
         uri,
@@ -62,7 +62,7 @@ void main() {
 
       final response = await transport.sync(syncRequest);
 
-      expect(response.ackedClientEventIds, isEmpty);
+      expect(response.successClientEventIds, isEmpty);
       expect(response.newServerEvents, isEmpty);
     });
 
@@ -72,12 +72,12 @@ void main() {
           serverEventId: 1,
           originClientDeviceId: 'device-id-1',
           originClientEventId: 'client-id-1',
-          payload: {'key': 'value'},
+          payload: {'key': 'value'},payloadManifest: [],
           createdAt: 0,
         ),
       ];
       final syncResponse =
-          SyncResponse(newServerEvents: serverEvents, ackedClientEventIds: []);
+          SyncResponse(newServerEvents: serverEvents, successClientEventIds: [], nextHeartbeatMs: -1, errorClientEventIds: {});
       final responseBody = jsonEncode(syncResponse.toJson());
 
       when(mockClient.post(

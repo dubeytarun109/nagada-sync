@@ -16,7 +16,7 @@ class MockHttpSyncTransport extends Mock implements HttpSyncTransport {
     return super.noSuchMethod(
       Invocation.method(#sync, [request]),
       returnValue: Future.value(
-        SyncResponse(ackedClientEventIds: [], newServerEvents: []),
+        SyncResponse(successClientEventIds: [], newServerEvents: [], nextHeartbeatMs: -1, errorClientEventIds: {}),
       ),
     );
   }
@@ -74,8 +74,8 @@ void main() {
         onApplyEvents: onApplyEvents ??
             (events) async {
               for (final event in events) {
-                if (event.payload['id'] != null) {
-                  projection[event.payload['id'] as String] = event.payload;
+                if (event.payload?['id'] != null) {
+                  projection[event.payload?['id'] as String] = event.payload;
                 }
               }
             },
@@ -89,7 +89,7 @@ void main() {
       final clientEvent = ClientEvent(
         clientEventId: 'push-event-1',
         type: 'item-created',
-        payload: {'id': 'item-1', 'data': 'value-1'},
+        payload: {'id': 'item-1', 'data': 'value-1'},payloadManifest: [],createdAt: 0,
       );
       await outbox.add(clientEvent);
 
@@ -111,13 +111,13 @@ void main() {
               serverEventId: 1,
               originClientEventId: clientEvent.clientEventId,
               originClientDeviceId: engine.deviceId,
-              payload: clientEvent.payload,
+              payload: clientEvent.payload,payloadManifest: [],
               createdAt: 0
             ),
           ];
           return SyncResponse(
-            ackedClientEventIds: ackedEvents,
-            newServerEvents: newServerEvents,
+            successClientEventIds: ackedEvents,
+            newServerEvents: newServerEvents, nextHeartbeatMs: -1, errorClientEventIds: {},
           );
         }
       });
@@ -125,13 +125,13 @@ void main() {
       // First cycle - push succeeds, but network fails before pull completes
       await expectLater(engine.runCycle(), throwsException);
       expect(syncCallCount, 1);
-      expect(await outbox.loadPending(), hasLength(1), reason: "Event should remain in outbox if ack not received");
+      expect(await outbox.pending(), hasLength(1), reason: "Event should remain in outbox if ack not received");
       expect(await offsetStore.get(), isNull, reason: "Offset should not advance if pull failed");
 
       // Second cycle - network is restored, client retries
       await engine.runCycle();
       expect(syncCallCount, 2);
-      expect(await outbox.loadPending(), isEmpty, reason: "Outbox should be empty after successful sync");
+      expect(await outbox.pending(), isEmpty, reason: "Outbox should be empty after successful sync");
       expect(projection.length, 1);
       expect(projection['item-1']['data'], 'value-1');
       expect(await offsetStore.get(), 1, reason: "Offset should advance after successful sync");
@@ -143,24 +143,24 @@ void main() {
       final engine = createEngine(onApplyEvents: (events) async {
         appliedEvents.addAll(events);
          for (final event in events) {
-          if (event.payload['id'] != null) {
-            projection[event.payload['id'] as String] = event.payload;
+          if (event.payload?['id'] != null) {
+            projection[event.payload?['id'] as String] = event.payload;
           }
         }
       });
 
       final clientEvents = [
-        ClientEvent(clientEventId: 'c1', type: 't', payload: {'id': '1'}),
-        ClientEvent(clientEventId: 'c2', type: 't', payload: {'id': '2'}),
+        ClientEvent(clientEventId: 'c1', type: 't', payload: {'id': '1'},payloadManifest: [],createdAt: 0),
+        ClientEvent(clientEventId: 'c2', type: 't', payload: {'id': '2'},payloadManifest: [],createdAt: 0),
       ];
       await outbox.add(clientEvents[0]);
       await outbox.add(clientEvents[1]);
 
       final allServerEvents = [
-        ServerEvent(serverEventId: 1, originClientEventId: 'c1', originClientDeviceId: 'd1',   payload: {'id': '1'},createdAt: 0),
-        ServerEvent(serverEventId: 2, originClientEventId: 'c2', originClientDeviceId: 'd1',   payload: {'id': '2'}, createdAt: 0),
-        ServerEvent(serverEventId: 3, originClientEventId: 's3', originClientDeviceId: 'd2',   payload: {'id': '3'}, createdAt: 0),
-        ServerEvent(serverEventId: 4, originClientEventId: 's4', originClientDeviceId: 'd2',   payload: {'id': '4'}, createdAt: 0),
+        ServerEvent(serverEventId: 1, originClientEventId: 'c1', originClientDeviceId: 'd1',   payload: {'id': '1'},payloadManifest: [],createdAt: 0),
+        ServerEvent(serverEventId: 2, originClientEventId: 'c2', originClientDeviceId: 'd1',   payload: {'id': '2'},payloadManifest: [], createdAt: 0),
+        ServerEvent(serverEventId: 3, originClientEventId: 's3', originClientDeviceId: 'd2',   payload: {'id': '3'},payloadManifest: [], createdAt: 0),
+        ServerEvent(serverEventId: 4, originClientEventId: 's4', originClientDeviceId: 'd2',   payload: {'id': '4'},payloadManifest: [], createdAt: 0),
       ];
 
       var syncCallCount = 0;
@@ -171,14 +171,14 @@ void main() {
           // The client should not advance its offset based on this partial response
           // and the outbox should acknowledge acked events
           return SyncResponse(
-            ackedClientEventIds: ['c1', 'c2'],
-            newServerEvents: allServerEvents.sublist(0, 2), // Only send first two events
+            successClientEventIds: ['c1', 'c2'],
+            newServerEvents: allServerEvents.sublist(0, 2), nextHeartbeatMs: -1, errorClientEventIds: {} // Only send first two events
           );
         } else {
           // Second attempt, server sends full batch
           return SyncResponse(
-            ackedClientEventIds: ['c1', 'c2'],
-            newServerEvents: allServerEvents,
+            successClientEventIds: ['c1', 'c2'],
+            newServerEvents: allServerEvents, nextHeartbeatMs: -1, errorClientEventIds: {},
           );
         }
       });
@@ -190,7 +190,7 @@ void main() {
       // will update the offset to 2 and apply these 2 events.
       // The goal here is to test resilience, so if the server sends partial but valid data,
       // the client should process it. The "partial failure" aspect means the *entire expected batch* didn't arrive.
-      expect(await outbox.loadPending(), isEmpty, reason: "Outbox should be cleared for acked events");
+      expect(await outbox.pending(), isEmpty, reason: "Outbox should be cleared for acked events");
       expect(appliedEvents.length, 2);
       expect(appliedEvents.map((e) => e.serverEventId), orderedEquals([1, 2]));
       expect(await offsetStore.get(), 2);
@@ -204,7 +204,7 @@ void main() {
       await engine.runCycle();
 
       expect(syncCallCount, 2);
-      expect(await outbox.loadPending(), isEmpty);
+      expect(await outbox.pending(), isEmpty);
       expect(appliedEvents.length, 2);
       expect(appliedEvents.map((e) => e.serverEventId), orderedEquals([3, 4]));
       expect(await offsetStore.get(), 4);
@@ -217,8 +217,8 @@ void main() {
       final engine = createEngine(onApplyEvents: (events) async {
         appliedEvents.addAll(events);
            for (final event in events) {
-          if (event.payload['id'] != null) {
-            projection[event.payload['id'] as String] = event.payload;
+          if (event.payload?['id'] != null) {
+            projection[event.payload?['id'] as String] = event.payload;
           }
         }
       });
@@ -229,14 +229,13 @@ void main() {
           serverEventId: i + 1,
           originClientEventId: 'client-${i + 1}',
           originClientDeviceId: 'server',
-          payload: {'id': 'item-${i + 1}', 'value': 'data-${i + 1}'},
+          payload: {'id': 'item-${i + 1}', 'value': 'data-${i + 1}'},payloadManifest: [],
           createdAt: 0,
         );
       });
 
       // Simulate chunking by the server
       const chunkSize = 1000;
-      var currentOffsetInMock = 0;
 
       when(transport.sync(any)).thenAnswer((invocation) async {
         final SyncRequest request = invocation.positionalArguments.first;
@@ -248,17 +247,17 @@ void main() {
             .toList();
 
         if (eventsToSend.isEmpty) {
-          return SyncResponse(ackedClientEventIds: [], newServerEvents: []);
+          return SyncResponse(successClientEventIds: [], newServerEvents: [], nextHeartbeatMs: -1, errorClientEventIds: {});
         }
 
         // Send events in chunks based on current offset for the mock
         final batch = eventsToSend.sublist(0, (eventsToSend.length > chunkSize) ? chunkSize : eventsToSend.length);
         
-        currentOffsetInMock = batch.isNotEmpty ? batch.last.serverEventId : clientLastSeen; // Update mock's internal offset
+        final currentOffsetInMock = batch.isNotEmpty ? batch.last.serverEventId : clientLastSeen; // Update mock's internal offset
 
         return SyncResponse(
-          ackedClientEventIds: [],
-          newServerEvents: batch,
+          successClientEventIds: [],
+          newServerEvents: batch, nextHeartbeatMs: -1, errorClientEventIds: {},
         );
       });
 

@@ -25,7 +25,7 @@ public class IdempotencyTest {
     @Test
     void shouldNotAppendDuplicateClientEvents() {
         // Given a client event
-        ClientEvent clientEvent = new ClientEvent("client-event-1", "test", "payload".getBytes());
+        ClientEvent clientEvent = new ClientEvent("client-event-1", "test", "payload".getBytes(), List.of(),0L);
         SyncRequest request = new SyncRequest("device-1", List.of(clientEvent), 0L);
 
         // When I send it once

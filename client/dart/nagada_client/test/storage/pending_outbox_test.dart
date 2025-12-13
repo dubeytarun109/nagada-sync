@@ -14,8 +14,8 @@ void main() {
       return ClientEvent(
         clientEventId: id,
         type: 'test-event',
-        payload: {'data': 'test'},
-        timestamp: timestamp,
+        payload: {'data': 'test'},payloadManifest: [],
+        createdAt: timestamp??0,
       );
     }
 

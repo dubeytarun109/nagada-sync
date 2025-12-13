@@ -16,7 +16,7 @@ public interface PendingOutbox {
      * @param clientEventId client-provided id for idempotency
      * @param payload opaque event payload bytes as string
      */
-    void add(String clientEventId, byte[] payload);
+    void add(String clientEventId, byte[] payload,List<String> payloadManifest,long createdAt);
 
     /**
      * Drain and return all pending events currently stored in the outbox.

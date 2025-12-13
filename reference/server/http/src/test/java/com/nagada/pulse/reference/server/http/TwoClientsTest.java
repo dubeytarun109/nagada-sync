@@ -42,7 +42,7 @@ public class TwoClientsTest {
     @Test
     void concurrentClientsCanSyncWithoutCorruption() {
         // 1. Client A syncs and creates an event.
-        ClientEvent eventA = new ClientEvent("client-a-ce-1", "msg.sent", "{\"text\":\"Hi from A\"}".getBytes(StandardCharsets.UTF_8));
+        ClientEvent eventA = new ClientEvent("client-a-ce-1", "msg.sent", "{\"text\":\"Hi from A\"}".getBytes(StandardCharsets.UTF_8),List.of()  ,0L );
         SyncRequest requestA = new SyncRequest("client-A", List.of(eventA), 0L);
         ResponseEntity<SyncResponse> responseA = restTemplate.postForEntity("/sync", requestA, SyncResponse.class);
         assertEquals(1, responseA.getBody().getNewServerEvents().size());
@@ -50,7 +50,7 @@ public class TwoClientsTest {
         assertEquals(1L, eventA_ServerId);
 
         // 2. Client B syncs, sending its own event and fetching updates from A.
-        ClientEvent eventB = new ClientEvent("client-b-ce-1", "msg.sent", "{\"text\":\"Hi from B\"}".getBytes(StandardCharsets.UTF_8));
+        ClientEvent eventB = new ClientEvent("client-b-ce-1", "msg.sent", "{\"text\":\"Hi from B\"}".getBytes(StandardCharsets.UTF_8),List.of() ,0L  );
         SyncRequest requestB = new SyncRequest("client-B", List.of(eventB), 0L);
         ResponseEntity<SyncResponse> responseB = restTemplate.postForEntity("/sync", requestB, SyncResponse.class);
 

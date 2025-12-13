@@ -17,9 +17,9 @@ public class OrderingTest {
     void setUp() {
         eventStore = new InMemoryEventStore();
         // Append some events
-        eventStore.append("device-1", new ClientEvent("c1", "t", "p".getBytes()));
-        eventStore.append("device-1", new ClientEvent("c2", "t", "p".getBytes()));
-        eventStore.append("device-1", new ClientEvent("c3", "t", "p".getBytes()));
+        eventStore.append("device-1", new ClientEvent("c1", "t", "p".getBytes(),List.of() ,0L  ));
+        eventStore.append("device-1", new ClientEvent("c2", "t", "p".getBytes(),List.of() ,0L  ));
+        eventStore.append("device-1", new ClientEvent("c3", "t", "p".getBytes(),List.of() ,0L  ));
     }
 
     @Test

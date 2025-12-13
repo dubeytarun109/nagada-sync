@@ -17,7 +17,7 @@ class MockHttpSyncTransport extends Mock implements HttpSyncTransport {
     return super.noSuchMethod(
       Invocation.method(#sync, [request]),
       returnValue: Future.value(
-        SyncResponse(ackedClientEventIds: [], newServerEvents: []),
+        SyncResponse(successClientEventIds: [], newServerEvents: [], nextHeartbeatMs: -1, errorClientEventIds: {}),
       ),
     );
   }
@@ -75,8 +75,8 @@ void main() {
         onApplyEvents: onApplyEvents ??
             (events) async {
               for (final event in events) {
-                if (event.payload['id'] != null) {
-                  projection[event.payload['id'] as String] = event.payload;
+                if (event.payload?['id'] != null) {
+                  projection[event.payload?['id'] as String] = event.payload;
                 }
               }
             },
@@ -104,15 +104,15 @@ void main() {
 
       // Server returns events out of order
       final serverEvents = [
-        ServerEvent(serverEventId: 3, originClientEventId: 'c3', originClientDeviceId: 'd1', payload: {"id": "item-1", "data": "e3"}, createdAt: 0),
-        ServerEvent(serverEventId: 1, originClientEventId: 'c1', originClientDeviceId: 'd1', payload: {"id": "item-1", "data": "e1"}, createdAt: 0),
-        ServerEvent(serverEventId: 2, originClientEventId: 'c2', originClientDeviceId: 'd1', payload: {"id": "item-1", "data": "e2"}, createdAt: 0),
+        ServerEvent(serverEventId: 3, originClientEventId: 'c3', originClientDeviceId: 'd1', payload: {"id": "item-1", "data": "e3"},payloadManifest: [], createdAt: 0),
+        ServerEvent(serverEventId: 1, originClientEventId: 'c1', originClientDeviceId: 'd1', payload: {"id": "item-1", "data": "e1"},payloadManifest: [], createdAt: 0),
+        ServerEvent(serverEventId: 2, originClientEventId: 'c2', originClientDeviceId: 'd1', payload: {"id": "item-1", "data": "e2"},payloadManifest: [], createdAt: 0),
       ];
 
       when(transport.sync(any)).thenAnswer(
         (_) async => SyncResponse(
-          ackedClientEventIds: [],
-          newServerEvents: serverEvents,
+          successClientEventIds: [],
+          newServerEvents: serverEvents, nextHeartbeatMs: -1, errorClientEventIds: {},
         ),
       );
 
@@ -137,7 +137,7 @@ void main() {
       projection['item-X'] = {'id': 'item-X', 'value': 'initial'};
 
       // Device A updates 'item-X'
-      await outbox.add(ClientEvent(clientEventId: 'clientA-1', type: 'update', payload: {'id': 'item-X', 'value': 'fromA'}));
+      await outbox.add(ClientEvent(clientEventId: 'clientA-1', type: 'update', payload: {'id': 'item-X', 'value': 'fromA'},payloadManifest: [],createdAt: 0));
 
       // Device B updates 'item-X' (happens concurrently, server sees it as 'remote')
       // Server response includes both Device A's acked event and Device B's change
@@ -147,21 +147,21 @@ void main() {
 
         final serverEvents = [
           // Device B's update, which happened on the server (serverEventId 10)
-          ServerEvent(serverEventId: 10, originClientEventId: 'conflicting-event', originClientDeviceId: 'deviceB', payload: {"id": "item-X", "value": "fromB"}, createdAt: 0),
+          ServerEvent(serverEventId: 10, originClientEventId: 'conflicting-event', originClientDeviceId: 'deviceB', payload: {"id": "item-X", "value": "fromB"},payloadManifest: [], createdAt: 0),
           // Device A's update, which happened on the server (serverEventId 11), conflicts with B's on the same clientEventId
-          ServerEvent(serverEventId: 11, originClientEventId: 'conflicting-event', originClientDeviceId: 'test-device', payload: {"id": "item-X", "value": "fromA"}, createdAt: 0),
+          ServerEvent(serverEventId: 11, originClientEventId: 'conflicting-event', originClientDeviceId: 'test-device', payload: {"id": "item-X", "value": "fromA"},payloadManifest: [], createdAt: 0),
         ];
 
         return SyncResponse(
-          ackedClientEventIds: ['clientA-1'],
-          newServerEvents: serverEvents,
+          successClientEventIds: ['clientA-1'],
+          newServerEvents: serverEvents, nextHeartbeatMs: -1, errorClientEventIds: {},
         );
       });
 
       await engine.runCycle();
 
       // Assertions
-      expect(await outbox.loadPending(), isEmpty);
+      expect(await outbox.pending(), isEmpty);
       expect(await offsetStore.get(), 11);
       
       // The projection should reflect the outcome of the conflict resolution.

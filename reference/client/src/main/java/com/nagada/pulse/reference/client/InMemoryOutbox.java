@@ -13,8 +13,8 @@ public class InMemoryOutbox implements PendingOutbox {
     private final List<ClientEvent> pendingEvents = new CopyOnWriteArrayList<>();
 
     @Override
-    public void add(String clientEventId, byte[] payload) {
-        ClientEvent event = new ClientEvent(clientEventId, "default-type", payload);
+    public void add(String clientEventId, byte[] payload,List<String> payloadManifest, long createdAt) {
+        ClientEvent event = new ClientEvent(clientEventId, "default-type", payload, payloadManifest,createdAt);
         // Avoid duplicates if the same clientEventId already exists
         boolean exists = pendingEvents.stream()
                 .anyMatch(e -> e.getClientEventId().equals(clientEventId));

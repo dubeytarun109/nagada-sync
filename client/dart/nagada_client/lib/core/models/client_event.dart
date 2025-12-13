@@ -12,17 +12,30 @@ class ClientEvent {
   final String type;
 
   /// Arbitrary JSON content describing the mutation.
-  final Map<String, dynamic> payload;
+  final Map<String, dynamic> ? payload;
 
+  final List<String> ? payloadManifest; 
   /// The time the event was created, in milliseconds since epoch.
-  final int timestamp;
+  final int createdAt;
 
   ClientEvent({
     required this.clientEventId,
     required this.type,
-    required this.payload,
-    int? timestamp,
-  }) : timestamp = timestamp ?? DateTime.now().millisecondsSinceEpoch;
+      this.payload,
+      this.payloadManifest,
+    required this.createdAt,
+  }) {
+    if (payload != null && payload!.containsKey('facts')) {
+      final facts = payload!['facts'];
+      if (facts is List) {
+        for (var fact in facts) {
+          if (fact is Map && !fact.containsKey('subject')) {
+            throw ArgumentError("Invalid payload.. $fact'");
+          }
+        }
+      }
+    }
+  }
 
   /// Creates a new `ClientEvent` from a JSON map.
   factory ClientEvent.fromJson(Map<String, dynamic> json) =>

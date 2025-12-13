@@ -11,3 +11,4 @@ export 'storage/adapters/in_memory_adapter.dart';
 export 'storage/offset_store.dart';
 export 'storage/pending_outbox.dart';
 export 'core/models/local_projection_store.dart';
+

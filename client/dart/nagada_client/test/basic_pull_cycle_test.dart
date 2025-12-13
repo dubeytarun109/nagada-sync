@@ -11,7 +11,7 @@ class MockHttpSyncTransport extends Mock implements HttpSyncTransport {
     return super.noSuchMethod(
       Invocation.method(#sync, [request]),
       returnValue: Future.value(
-        SyncResponse(ackedClientEventIds: [], newServerEvents: []),
+        SyncResponse(successClientEventIds: [], newServerEvents: [], nextHeartbeatMs: -1, errorClientEventIds: {}),
       ),
     );
   }
@@ -34,21 +34,21 @@ void main() {
         outbox: pendingOutbox,
         onApplyEvents: (events) async {
           for (final event in events) {
-            projection[event.payload['id'] as String] = event.payload;
+            projection[event.payload?['id'] as String] = event.payload;
           }
         },
       );
 
       final serverEvents = [
-        ServerEvent(serverEventId: 1, originClientEventId: 'c1', originClientDeviceId: 'd1', payload: {"id": "1", "data": "a"}, createdAt: 0),
-        ServerEvent(serverEventId: 2, originClientEventId: 'c2', originClientDeviceId: 'd1', payload: {"id": "2", "data": "b"}, createdAt: 0),
-        ServerEvent(serverEventId: 3, originClientEventId: 'c3', originClientDeviceId: 'd1', payload: {"id": "3", "data": "c"}, createdAt: 0),
+        ServerEvent(serverEventId: 1, originClientEventId: 'c1', originClientDeviceId: 'd1', payload: {"id": "1", "data": "a"},payloadManifest: [], createdAt: 0),
+        ServerEvent(serverEventId: 2, originClientEventId: 'c2', originClientDeviceId: 'd1', payload: {"id": "2", "data": "b"},payloadManifest: [], createdAt: 0),
+        ServerEvent(serverEventId: 3, originClientEventId: 'c3', originClientDeviceId: 'd1', payload: {"id": "3", "data": "c"},payloadManifest: [], createdAt: 0),
       ];
 
       when(transport.sync(any)).thenAnswer(
         (_) async => SyncResponse(
-          ackedClientEventIds: [],
-          newServerEvents: serverEvents,
+          successClientEventIds: [],
+          newServerEvents: serverEvents, nextHeartbeatMs: -1, errorClientEventIds: {}
         ),
       );
 
@@ -80,7 +80,7 @@ void main() {
         outbox: pendingOutbox,
         onApplyEvents: (events) async {
           for (final event in events) {
-            projection[event.payload['id'] as String] = event.payload;
+            projection[event.payload?['id'] as String] = event.payload;
           }
         },
       );
@@ -89,16 +89,16 @@ void main() {
       final clientEvent = ClientEvent(
         clientEventId: 'event-123',
         type: 'item-created',
-        payload: {'id': '4', 'data': 'd'},
+        payload: {'id': '4', 'data': 'd'},payloadManifest: ['1','2'],createdAt: 0,
       );
       await pendingOutbox.add(clientEvent);
 
       // 2. Configure mock server response
       final serverEvents = [
         // Server echoes back the client's event, now enriched with a server ID
-        ServerEvent(serverEventId: 4, originClientEventId: 'event-123', originClientDeviceId: 'test-device', payload: {"id": "4", "data": "d"}, createdAt: 0),
+        ServerEvent(serverEventId: 4, originClientEventId: 'event-123', originClientDeviceId: 'test-device', payload: {"id": "4", "data": "d"},payloadManifest: [],createdAt: 0),
         // Another event from a different client
-        ServerEvent(serverEventId: 5, originClientEventId: 'c5', originClientDeviceId: 'other-device', payload: {"id": "5", "data": "e"}, createdAt: 0),
+        ServerEvent(serverEventId: 5, originClientEventId: 'c5', originClientDeviceId: 'other-device', payload: {"id": "5", "data": "e"},payloadManifest: [], createdAt: 0),
       ];
 
       when(transport.sync(any)).thenAnswer((invocation) async {
@@ -107,8 +107,8 @@ void main() {
         expect(request.pendingEvents.first.clientEventId, 'event-123');
         
         return SyncResponse(
-          ackedClientEventIds: ['event-123'],
-          newServerEvents: serverEvents,
+          successClientEventIds: ['event-123'],
+          newServerEvents: serverEvents, nextHeartbeatMs: -1, errorClientEventIds: {}
         );
       });
 
@@ -117,7 +117,7 @@ void main() {
 
       // Assert
       // Outbox should be empty
-      final pending = await pendingOutbox.loadPending();
+      final pending = await pendingOutbox.pending();
       expect(pending, isEmpty);
 
       // Offset should be updated
@@ -147,20 +147,20 @@ void main() {
         onApplyEvents: (events) async {
           applyCount++;
           for (final event in events) {
-            projection[event.payload['id'] as String] = event.payload;
+            projection[event.payload?['id'] as String] = event.payload;
           }
         },
       );
 
       final serverEvents = [
-        ServerEvent(serverEventId: 1, originClientEventId: 'c1', originClientDeviceId: 'd1', payload: {"id": "1", "data": "a"}, createdAt: 0),
-        ServerEvent(serverEventId: 2, originClientEventId: 'c2', originClientDeviceId: 'd1', payload: {"id": "2", "data": "b"}, createdAt: 0),
+        ServerEvent(serverEventId: 1, originClientEventId: 'c1', originClientDeviceId: 'd1', payload: {"id": "1", "data": "a"},payloadManifest: [], createdAt: 0),
+        ServerEvent(serverEventId: 2, originClientEventId: 'c2', originClientDeviceId: 'd1', payload: {"id": "2", "data": "b"},payloadManifest: [], createdAt: 0),
       ];
 
       when(transport.sync(any)).thenAnswer(
         (_) async => SyncResponse(
-          ackedClientEventIds: [],
-          newServerEvents: serverEvents,
+          successClientEventIds: [],
+          newServerEvents: serverEvents, nextHeartbeatMs: -1, errorClientEventIds: {},
         ),
       );
 
@@ -198,7 +198,7 @@ void main() {
       final clientEvent = ClientEvent(
         clientEventId: 'crash-event-456',
         type: 'item-added',
-        payload: {'id': '10', 'value': 'x'},
+        payload: {'id': '10', 'value': 'x'},payloadManifest: [],createdAt: 0
       );
       await pendingOutbox.add(clientEvent);
 
@@ -219,12 +219,12 @@ void main() {
             serverEventId: 10,
             originClientEventId: 'crash-event-456',
             originClientDeviceId: 'test-device',
-            payload: {"id": "10", "value": "x"},
+            payload: {"id": "10", "value": "x"},payloadManifest: [],
             createdAt: 0,
           );
           return SyncResponse(
-            ackedClientEventIds: ['crash-event-456'],
-            newServerEvents: [serverEvent],
+            successClientEventIds: ['crash-event-456'],
+            newServerEvents: [serverEvent], nextHeartbeatMs: -1, errorClientEventIds: {},
           );
         }
       });
@@ -238,7 +238,7 @@ void main() {
         onApplyEvents: (events) async {
           applyCount++;
           for (final event in events) {
-            projection[event.payload['id'] as String] = event.payload;
+            projection[event.payload?['id'] as String] = event.payload;
           }
         },
       );
@@ -261,7 +261,7 @@ void main() {
         onApplyEvents: (events) async {
           applyCount++;
           for (final event in events) {
-            projection[event.payload['id'] as String] = event.payload;
+            projection[event.payload?['id'] as String] = event.payload;
           }
         },
       );

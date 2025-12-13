@@ -3,6 +3,7 @@ package com.nagada.pulse.reference.server.http;
 import com.nagada.pulse.protocol.SyncRequest;
 import com.nagada.pulse.protocol.SyncResponse;
 import com.nagada.pulse.reference.server.SyncHandler;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
  * Maps incoming HTTP JSON requests to SyncRequest messages and delegates
  * to the core SyncHandler for protocol processing.
  */
+@Slf4j
 @RestController
 @RequestMapping("/sync")
 public class SyncController {
@@ -45,6 +47,11 @@ public class SyncController {
      */
     @PostMapping
     public SyncResponse sync(@RequestBody SyncRequest request) {
-        return syncHandler.handle(request);
+        log.info("Received sync request from device: {}", request.getDeviceId());
+        log.debug("Sync request details: {}", request);
+        SyncResponse response = syncHandler.handle(request);
+        log.info("Sending sync response to device: {}. {} new events.", request.getDeviceId(), response.getNewServerEvents().size());
+        log.debug("Sync response details: {}", response);
+        return response;
     }
 }

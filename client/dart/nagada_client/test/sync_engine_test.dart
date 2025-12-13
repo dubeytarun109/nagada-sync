@@ -40,7 +40,7 @@ void main() {
       when(mockOffsetStore.get()).thenAnswer((_) async => 0);
       when(mockPendingOutbox.pending()).thenAnswer((_) async => []);
       when(mockTransport.sync(any)).thenAnswer(
-          (_) async => SyncResponse(ackedClientEventIds: [], newServerEvents: []));
+          (_) async => SyncResponse(successClientEventIds: [], newServerEvents: [], nextHeartbeatMs: -1, errorClientEventIds: {}));
       when(mockOffsetStore.save(any)).thenAnswer((_) async {});
       when(mockPendingOutbox.markAsSynced(any)).thenAnswer((_) async {});
     });
@@ -51,18 +51,18 @@ void main() {
         ClientEvent(
             clientEventId: 'c1',
             type: 'test',
-            payload: {'data': 'test'}),
+            payload: {'data': 'test'},payloadManifest: [],createdAt: 0),
       ];
       final serverEvents = [
         ServerEvent(
             serverEventId: 1,
             originClientEventId: 'c1',
             originClientDeviceId: 'test-device',
-            payload: {"data": "test"},
+            payload: {"data": "test"},payloadManifest: [],
             createdAt: 0)
       ];
       final response = SyncResponse(
-          ackedClientEventIds: ['c1'], newServerEvents: serverEvents);
+          successClientEventIds: ['c1'], newServerEvents: serverEvents, nextHeartbeatMs: -1, errorClientEventIds: {});
 
       when(mockOffsetStore.get()).thenAnswer((_) async => 0);
       when(mockPendingOutbox.pending()).thenAnswer((_) async => pendingEvents);
@@ -87,12 +87,12 @@ void main() {
           serverEventId: 1,
           originClientEventId: 'client-event-1',
           originClientDeviceId: 'server-device',
-          payload: {"data": "from-server"},
+          payload: {"data": "from-server"},payloadManifest: [],
           createdAt: 0,
         ),
       ];
       final response =
-          SyncResponse(ackedClientEventIds: [], newServerEvents: serverEvents);
+          SyncResponse(successClientEventIds: [], newServerEvents: serverEvents, nextHeartbeatMs: -1, errorClientEventIds: {});
       when(mockTransport.sync(any)).thenAnswer((_) async => response);
 
       // Act
@@ -100,6 +100,40 @@ void main() {
 
       // Assert
       expect(appliedEvents, serverEvents);
+    });
+
+    test('runCycle handles errorClientEventIds by marking them as synced', () async {
+      // Arrange
+      final pendingEvents = [
+        ClientEvent(
+            clientEventId: 'c1',
+            type: 'test',
+            payload: {'data': 'success'},createdAt: 0,
+            payloadManifest: []),
+        ClientEvent(
+            clientEventId: 'c2',
+            type: 'test',
+            payload: {'data': 'error'},
+            payloadManifest: [],createdAt: 0),
+      ];
+
+      final response = SyncResponse(
+          successClientEventIds: ['c1'],
+          newServerEvents: [],
+          nextHeartbeatMs: -1,
+          errorClientEventIds: {'c2': 'Conflict detected'});
+
+      when(mockOffsetStore.get()).thenAnswer((_) async => 0);
+      when(mockPendingOutbox.pending()).thenAnswer((_) async => pendingEvents);
+      when(mockTransport.sync(any)).thenAnswer((_) async => response);
+
+      // Act
+      await syncEngine.runCycle();
+
+      // Assert
+      final verification = verify(mockPendingOutbox.markAsSynced(captureAny));
+      final allMarkedIds = verification.captured.expand((e) => e as List<String>).toList();
+      expect(allMarkedIds, containsAll(['c1', 'c2']));
     });
   });
 }

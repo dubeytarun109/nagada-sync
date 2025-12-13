@@ -2,19 +2,19 @@
 library nagada_client;
 
 import 'outbox.dart';
-import 'projection_store.dart';
+import 'storage/projection_store.dart';
 import 'sync_engine.dart';
 
 export 'outbox.dart';
-export 'projection_store.dart';
+export 'storage/projection_store.dart';
 export 'sync_engine.dart';
 
-class NagadaClient {
+class SyncEngineClient {
   final SyncEngine syncEngine;
   final Outbox outbox;
   final ProjectionStore projections;
 
-  NagadaClient({
+  SyncEngineClient({
     required this.syncEngine,
     required this.outbox,
     required this.projections,

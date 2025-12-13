@@ -48,7 +48,9 @@ public class BasicSyncTest {
     void singleClientCanCompleteFullSyncCycle() {
         // 1. Client starts with no state.
         String clientEventId = "ce-" + UUID.randomUUID();
-        ClientEvent event = new ClientEvent(clientEventId, "item.created", "{\"text\":\"Hello\"}".getBytes(StandardCharsets.UTF_8));
+        ClientEvent event = new ClientEvent(clientEventId, 
+            "item.created", "{\"text\":\"Hello\"}".getBytes(StandardCharsets.UTF_8),List.of() 
+             ,0L );
 
         // 2. Client sends a sync request with one pending event.
         SyncRequest request = new SyncRequest("client-1", List.of(event), 0L);
@@ -63,14 +65,14 @@ public class BasicSyncTest {
         assertEquals(1, response.getNewServerEvents().size());
         assertEquals(clientEventId, response.getNewServerEvents().get(0).getOriginClientEventId());
         assertEquals(1L, response.getNewServerEvents().get(0).getServerEventId());
-        assertTrue(response.getAckedClientEventIds().contains(clientEventId));
+        assertTrue(response.getSuccessClientEventIds().contains(clientEventId));
     }
 
     @Test
     void clientHandlesOfflineEventBurst() {
         // 1. Simulate a client generating multiple (e.g., 10) events while offline.
         List<ClientEvent> pendingEvents = IntStream.range(0, 10)
-                .mapToObj(i -> new ClientEvent("ce-" + i, "item.created", "{}".getBytes(StandardCharsets.UTF_8)))
+                .mapToObj(i -> new ClientEvent("ce-" + i, "item.created", "{}".getBytes(StandardCharsets.UTF_8),List.of()  ,0L ))
                 .collect(Collectors.toList());
 
         // 2. Client comes online and sends a single sync request with all pending events.
@@ -88,8 +90,8 @@ public class BasicSyncTest {
         }
 
         // 4. Verify the client receives the committed events and updates its state correctly.
-        assertEquals(10, response.getAckedClientEventIds().size());
-        assertTrue(response.getAckedClientEventIds().contains("ce-0"));
-        assertTrue(response.getAckedClientEventIds().contains("ce-9"));
+        assertEquals(10, response.getSuccessClientEventIds().size());
+        assertTrue(response.getSuccessClientEventIds().contains("ce-0"));
+        assertTrue(response.getSuccessClientEventIds().contains("ce-9"));
     }
 }

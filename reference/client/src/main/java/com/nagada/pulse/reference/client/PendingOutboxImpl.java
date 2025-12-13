@@ -14,8 +14,9 @@ public class PendingOutboxImpl implements PendingOutbox {
     /**
      * Add an event to the pending queue.
      */
-    public void add(String clientEventId, byte[] payload) {
-        pending.add(new ClientEvent(clientEventId, "default-type", payload));
+    @Override
+    public void add(String clientEventId, byte[] payload,List<String> payloadManifest ,long createdAt) {
+        pending.add(new ClientEvent(clientEventId, "default-type", payload,payloadManifest,createdAt));
     }
 
     /**

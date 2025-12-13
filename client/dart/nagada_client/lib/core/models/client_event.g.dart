@@ -9,8 +9,11 @@ part of 'client_event.dart';
 ClientEvent _$ClientEventFromJson(Map<String, dynamic> json) => ClientEvent(
   clientEventId: json['clientEventId'] as String,
   type: json['type'] as String,
-  payload: json['payload'] as Map<String, dynamic>,
-  timestamp: (json['timestamp'] as num?)?.toInt(),
+  payload: json['payload'] as Map<String, dynamic>?,
+  payloadManifest: (json['payloadManifest'] as List<dynamic>?)
+      ?.map((e) => e as String)
+      .toList(),
+  createdAt: (json['createdAt'] as num).toInt(),
 );
 
 Map<String, dynamic> _$ClientEventToJson(ClientEvent instance) =>
@@ -18,5 +21,6 @@ Map<String, dynamic> _$ClientEventToJson(ClientEvent instance) =>
       'clientEventId': instance.clientEventId,
       'type': instance.type,
       'payload': instance.payload,
-      'timestamp': instance.timestamp,
+      'payloadManifest': instance.payloadManifest,
+      'createdAt': instance.createdAt,
     };

@@ -27,4 +27,5 @@ public class SyncRequest {
     public long getLastKnownServerEventId() {
         return lastKnownServerEventId;
     }
+    
 }

@@ -25,8 +25,8 @@ public class OffsetTest {
     void shouldAdvanceOffsetWhenProcessingEvents() {
         // Given
         String deviceId = "device-1";
-        ClientEvent clientEvent1 = new ClientEvent("c1", "t", "p".getBytes());
-        ClientEvent clientEvent2 = new ClientEvent("c2", "t", "p".getBytes());
+        ClientEvent clientEvent1 = new ClientEvent("c1", "t", "p".getBytes(), List.of(),0L);
+        ClientEvent clientEvent2 = new ClientEvent("c2", "t", "p".getBytes(), List.of(),0L);
 
         // When
         systoleProcessor.process(deviceId, List.of(clientEvent1, clientEvent2));

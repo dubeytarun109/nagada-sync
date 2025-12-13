@@ -9,7 +9,6 @@ class SyncRequest {
   final String deviceId;
   final int lastKnownServerEventId;
   final List<ClientEvent> pendingEvents;
-
   // Optional fields from the spec, can be added as needed.
   // final String? protocolVersion;
   // final String? userId;

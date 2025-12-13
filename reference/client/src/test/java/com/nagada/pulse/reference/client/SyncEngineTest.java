@@ -3,7 +3,6 @@ package com.nagada.pulse.reference.client;
 import com.nagada.pulse.protocol.ClientEvent;
 import com.nagada.pulse.protocol.ServerEvent;
 import com.nagada.pulse.protocol.SyncRequest;
-import com.nagada.pulse.protocol.SyncResponse;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -19,8 +18,8 @@ public class SyncEngineTest {
         InMemoryOutbox outbox = new InMemoryOutbox();
         InMemoryProjectionStore projectionStore = new InMemoryProjectionStore();
         SyncEngine syncEngine = new SyncEngine("device-1", outbox, projectionStore, (SyncEngine.SyncTransport) null);
-        outbox.add("c1", "p".getBytes());
-        projectionStore.recordEvents(List.of(new ServerEvent(10L, "c","d", "p", 0)));
+        outbox.add("c1", "p".getBytes(),List.of()  ,0     );
+        projectionStore.recordEvents(List.of(new ServerEvent(10L, "c","d", "p".getBytes(),List.of("p"), 0)));
 
         // When
         SyncRequest request = syncEngine.buildSyncRequest();
@@ -38,8 +37,8 @@ public class SyncEngineTest {
         private final List<ClientEvent> events = new ArrayList<>();
 
         @Override
-        public void add(String clientEventId, byte[] payload) {
-            events.add(new ClientEvent(clientEventId, "default-type", payload));
+        public void add(String clientEventId, byte[] payload, List<String> payloadManifest, long createdAt) {
+            events.add(new ClientEvent(clientEventId, "default-type", payload,payloadManifest,createdAt));
         }
 
         @Override

@@ -1,24 +1,33 @@
-import '../lib/nagada_client.dart';
+import 'package:nagada_client/nagada.dart';
+import 'package:logging/logging.dart';
 
-void main() {
-  final outbox = Outbox();
-  final store = ProjectionStore();
-  final syncEngine = SyncEngine(interval: Duration(seconds: 10));
+void main() async {
+  // Configure logging to print all levels
+  Logger.root.level = Level.ALL;
+  Logger.root.onRecord.listen((record) {
+    print('${record.level.name}: ${record.time}: ${record.loggerName}: ${record.message}');
+  });
 
-  final client = NagadaClient(
-    syncEngine: syncEngine,
-    outbox: outbox,
-    projections: store,
+  final log = Logger('SimpleConsoleApp');
+
+  log.info('Creating NagadaClient...');
+  final client = NagadaClient.create(
+    deviceId: 'my-device-1',
+    serverUrl: 'http://localhost:8080/sync',
   );
 
-  outbox.add({'type': 'greeting', 'payload': 'Hello Nagada'});
+  log.info('Inserting a record...');
+  await client.insert('greetings', {'message': 'Hello from Dart!'}, ['message']);
 
-  client.start();
-  print('Nagada client started (example).');
+  log.info('Triggering initial sync...');
+  await client.sync();
 
-  // Run for a short time then stop
-  Future.delayed(Duration(seconds: 2), () {
-    client.stop();
-    print('Nagada client stopped.');
-  });
+  // The sync engine will continue to run in the background.
+  // In a real app, you would let it run. For this example, we'll stop it.
+  log.info('Waiting for 10 seconds before shutting down...');
+  await Future.delayed(const Duration(seconds: 10));
+
+  log.info('Disposing client...');
+  client.dispose();
+  log.info('Client disposed. Application finished.');
 }

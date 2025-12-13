@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // For HapticFeedback
-import 'package:nagada_client/nagada_client.dart'; // Core SDK dependency
+import 'package:nagada_client/sync_engine.dart'; // Core SDK dependency
 
 enum SyncState {
   idle,

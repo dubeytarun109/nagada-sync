@@ -4,10 +4,10 @@ import 'package:test/test.dart';
 
 void main() {
   group('ConflictResolver', () {
-    final event1 = ServerEvent(serverEventId: 1, originClientEventId: 'a', originClientDeviceId: 'd1',  payload: {'v': 1},createdAt: 0);
-    final event2 = ServerEvent(serverEventId: 2, originClientEventId: 'b', originClientDeviceId: 'd1',  payload: {'v': 2},createdAt: 0);
-    final event3Conflict = ServerEvent(serverEventId: 3, originClientEventId: 'a', originClientDeviceId: 'd2',  payload: {'v': 3},createdAt: 0);
-    final event4 = ServerEvent(serverEventId: 4, originClientEventId: 'c', originClientDeviceId: 'd1',  payload: {'v': 4},createdAt: 0);
+    final event1 = ServerEvent(serverEventId: 1, originClientEventId: 'a', originClientDeviceId: 'd1',  payload: {'v': 1},payloadManifest: [],createdAt: 0);
+    final event2 = ServerEvent(serverEventId: 2, originClientEventId: 'b', originClientDeviceId: 'd1',  payload: {'v': 2},payloadManifest: [],createdAt: 0);
+    final event3Conflict = ServerEvent(serverEventId: 3, originClientEventId: 'a', originClientDeviceId: 'd2',  payload: {'v': 3},payloadManifest: [],createdAt: 0);
+    final event4 = ServerEvent(serverEventId: 4, originClientEventId: 'c', originClientDeviceId: 'd1',  payload: {'v': 4},payloadManifest: [],createdAt: 0);
 
     test('Last-write-wins logic', () {
       final resolver = ConflictResolver();

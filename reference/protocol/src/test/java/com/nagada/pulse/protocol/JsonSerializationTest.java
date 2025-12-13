@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -13,7 +14,7 @@ public class JsonSerializationTest {
 
     @Test
     void testClientEvent() throws Exception {
-        ClientEvent original = new ClientEvent("c-event-1", "test-type", "payload".getBytes());
+        ClientEvent original = new ClientEvent("c-event-1", "test-type", "payload".getBytes(), List.of("item1", "item2"),0L);
         String json = objectMapper.writeValueAsString(original);
         ClientEvent deserialized = objectMapper.readValue(json, ClientEvent.class);
         assertThat(deserialized.getClientEventId()).isEqualTo(original.getClientEventId());
@@ -23,7 +24,8 @@ public class JsonSerializationTest {
 
     @Test
     void testServerEvent() throws Exception {
-        ServerEvent original = new ServerEvent(1L, "test-client-event-id", "device-1", "payload", System.currentTimeMillis());
+        ServerEvent original = new ServerEvent(1L, "test-client-event-id", 
+        "device-1", "payload".getBytes(), List.of("p"),System.currentTimeMillis());
         String json = objectMapper.writeValueAsString(original);
         ServerEvent deserialized = objectMapper.readValue(json, ServerEvent.class);
         assertThat(deserialized).usingRecursiveComparison().isEqualTo(original);
@@ -31,7 +33,7 @@ public class JsonSerializationTest {
 
     @Test
     void testSyncRequest() throws Exception {
-        ClientEvent clientEvent = new ClientEvent("c-event-1", "test-type", "payload".getBytes());
+        ClientEvent clientEvent = new ClientEvent("c-event-1", "test-type", "payload".getBytes(), List.of("item1", "item2"),0L);
         SyncRequest original = new SyncRequest("device-1", List.of(clientEvent), 0L);
         String json = objectMapper.writeValueAsString(original);
         SyncRequest deserialized = objectMapper.readValue(json, SyncRequest.class);
@@ -44,12 +46,12 @@ public class JsonSerializationTest {
 
     @Test
     void testSyncResponse() throws Exception {
-        ServerEvent serverEvent = new ServerEvent(1L, "test-client-event-id", "device-1", "payload", System.currentTimeMillis());
-        SyncResponse original = new SyncResponse(List.of("c-event-1"), List.of(serverEvent));
+        ServerEvent serverEvent = new ServerEvent(1L, "test-client-event-id", "device-1", "payload".getBytes(),List.of("p"), System.currentTimeMillis());
+        SyncResponse original = new SyncResponse(List.of("c-event-1"), List.of(serverEvent),0,Map.of());
         String json = objectMapper.writeValueAsString(original);
         SyncResponse deserialized = objectMapper.readValue(json, SyncResponse.class);
 
-        assertThat(deserialized.getAckedClientEventIds()).isEqualTo(original.getAckedClientEventIds());
+        assertThat(deserialized.getSuccessClientEventIds()).isEqualTo(original.getSuccessClientEventIds());
         assertThat(deserialized.getNewServerEvents()).usingRecursiveFieldByFieldElementComparator().isEqualTo(original.getNewServerEvents());
     }
 }

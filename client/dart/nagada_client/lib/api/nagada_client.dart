@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:logging/logging.dart';
+
 import '../storage/adapters/in_memory_adapter.dart';
 import '../protocol/http_sync_transport.dart';
 import 'package:uuid/uuid.dart';
@@ -25,6 +27,8 @@ abstract class NagadaClient {
     required String serverUrl,
     ConflictResolver? conflictResolver,
   }) {
+    final log = Logger('NagadaClient');
+    log.info('Creating NagadaClient for server: $serverUrl');
     final transport = HttpSyncTransport(serverUrl: serverUrl);
     final storage = InMemoryAdapter();
     return NagadaClientImpl(
@@ -40,8 +44,8 @@ abstract class NagadaClient {
   Future<void> sync();
 
   /// Inserts data for a given table, creating an event to be synced.
-  Future<void> insert(String table, Map<String, dynamic> data);
-
+  Future<void> insert(String table, Map<String, dynamic> data, List<String> payloadManifest) ;
+  
   /// A stream that emits record changes for a given table.
   Stream<RecordChangeEvent> onChange(String table);
 
@@ -52,6 +56,7 @@ abstract class NagadaClient {
 
 /// The default implementation of [NagadaClient].
 class NagadaClientImpl implements NagadaClient {
+  final _log = Logger('NagadaClientImpl');
   late final SyncEngine _engine;
   final PendingOutbox _outbox;
   final Uuid _uuid;
@@ -66,6 +71,7 @@ class NagadaClientImpl implements NagadaClient {
     Uuid? uuid,
   })  : _outbox = outbox,
         _uuid = uuid ?? const Uuid() {
+    _log.fine('Initializing NagadaClient implementation');
     _engine = SyncEngine(
       deviceId: deviceId,
       transport: transport,
@@ -83,19 +89,26 @@ class NagadaClientImpl implements NagadaClient {
   }
 
   @override
-  Future<void> sync() => _engine.runCycle();
+  Future<void> sync() {
+    _log.info('Manual sync triggered');
+    return _engine.runCycle();
+  }
 
   @override
-  Future<void> insert(String table, Map<String, dynamic> data) {
+  Future<void> insert(String table, Map<String, dynamic> data, List<String> payloadManifest) {
     final event = ClientEvent(
       clientEventId: _uuid.v4(),
       type: table, // Using table as event type for now
       payload: data,
+      payloadManifest: payloadManifest,
+     createdAt:  DateTime.now().millisecondsSinceEpoch,
     );
+    _log.fine('Inserting new event: ${event.clientEventId} for table: $table');
     return _outbox.add(event);
   }
 
   Future<void> _handleNewEvents(List<ServerEvent> events) async {
+    _log.fine('Handling ${events.length} new server events');
     if (events.isNotEmpty) {
       _eventsController.add(events);
     }
@@ -103,6 +116,7 @@ class NagadaClientImpl implements NagadaClient {
 
   @override
   void dispose() {
+    _log.info('Disposing NagadaClient');
     _eventsController.close();
     _engine.dispose();
   }

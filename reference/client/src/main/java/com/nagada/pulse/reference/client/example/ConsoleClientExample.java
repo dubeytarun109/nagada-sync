@@ -38,9 +38,9 @@ public class ConsoleClientExample {
 
         // 3. Add some events to the outbox
         System.out.println("3. Adding events to outbox:");
-        outbox.add("event-1", "hello world".getBytes());
-        outbox.add("event-2", "sync test".getBytes());
-        outbox.add("event-3", "client example".getBytes());
+        outbox.add("event-1", "hello world".getBytes(),List.of("text"),0);
+        outbox.add("event-2", "sync test".getBytes(),List.of("text"),0);
+        outbox.add("event-3", "client example".getBytes(),List.of("text"),0);
         System.out.println("   - Added 3 events\n");
 
         // 4. Build a sync request
